@@ -13,7 +13,7 @@ export default function Footer() {
                 <Play className="w-4 h-4 text-white fill-white" />
               </div>
               <span className="text-lg font-bold text-white">
-                YouTube<span className="text-primary-500">Auto</span>
+                U<span className="text-primary-500">Creator</span>
               </span>
             </Link>
             <p className="text-dark-400 text-sm leading-relaxed">

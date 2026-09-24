@@ -78,7 +78,7 @@ export default function Sidebar() {
             </div>
             {!isCollapsed && (
               <span className="text-lg font-bold text-white tracking-tight">
-                YouTube<span className="text-primary-500">Auto</span>
+                U<span className="text-primary-500">Creator</span>
               </span>
             )}
           </Link>

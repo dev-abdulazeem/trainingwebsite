@@ -24,7 +24,7 @@ export default function Navbar() {
               <Play className="w-4 h-4 text-white fill-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">
-              YouTube<span className="text-primary-500">Auto</span>
+              U<span className="text-primary-500">Creator</span>
             </span>
           </Link>
 

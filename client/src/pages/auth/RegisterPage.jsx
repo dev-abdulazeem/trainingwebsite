@@ -69,7 +69,7 @@ export default function RegisterPage() {
               <Play className="w-5 h-5 text-white fill-white" />
             </div>
             <span className="text-xl font-bold text-white">
-              YouTube<span className="text-primary-500">Auto</span>
+              U<span className="text-primary-500">Creator</span>
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
