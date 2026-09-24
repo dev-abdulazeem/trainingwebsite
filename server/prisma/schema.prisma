@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(STUDENT)
+  isActive      Boolean   @default(true)
+  lastActiveAt  DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  enrollments   Enrollment[]
+  progress      Progress[]
+  submissions   Submission[]
+  posts         CommunityPost[]
+  replies       CommunityReply[]
+  notifications Notification[]
+  payments      Payment[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String   @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  status      CourseStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  modules     Module[]
+  enrollments Enrollment[]
+  coupons     Coupon[]
+  payments    Payment[]
+
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  courseId  String
+  title     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id            String        @id @default(uuid())
+  moduleId      String
+  title         String
+  videoUrl      String?
+  videoPublicId String?
+  videoType     VideoType     @default(NONE)
+  duration      Int           @default(0)
+  description   String        @db.Text
+  sortOrder     Int           @default(0)
+  isPublished   Boolean       @default(false)
+  releaseDate   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  module        Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  resources     Resource[]
+  progress      Progress[]
+  assignment    Assignment?
+
+  @@map("lessons")
+}
+
+enum VideoType {
+  NONE
+  UPLOAD
+  LINK
+}
+
+model Resource {
+  id        String   @id @default(uuid())
+  lessonId  String
+  title     String
+  fileUrl   String
+  fileType  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("resources")
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  status    EnrollmentStatus @default(ACTIVE)
+  enrolledAt DateTime @default(now())
+  expiresAt  DateTime?
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Progress {
+  id            String    @id @default(uuid())
+  userId        String
+  lessonId      String
+  watchedSeconds Int      @default(0)
+  isCompleted   Boolean   @default(false)
+  completedAt   DateTime?
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson        Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("progress")
+}
+
+model Assignment {
+  id          String   @id @default(uuid())
+  lessonId    String   @unique
+  title       String
+  description String   @db.Text
+  dueDays     Int      @default(7)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  lesson      Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@map("assignments")
+}
+
+model Submission {
+  id          String           @id @default(uuid())
+  assignmentId String
+  userId      String
+  content     String?          @db.Text
+  fileUrl     String?
+  status      SubmissionStatus @default(PENDING)
+  feedback    String?          @db.Text
+  submittedAt DateTime         @default(now())
+  gradedAt    DateTime?
+
+  // Relations
+  assignment  Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+model Coupon {
+  id            String       @id @default(uuid())
+  code          String       @unique
+  discountType  DiscountType
+  discountValue Decimal      @db.Decimal(10, 2)
+  maxUses       Int?
+  usedCount     Int          @default(0)
+  expiryDate    DateTime?
+  isActive      Boolean      @default(true)
+  courseId      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  course        Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  payments      Payment[]
+
+  @@map("coupons")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  userId        String
+  courseId      String
+  amount        Decimal       @db.Decimal(10, 2)
+  discount      Decimal       @default(0) @db.Decimal(10, 2)
+  finalAmount   Decimal       @db.Decimal(10, 2)
+  couponId      String?
+  paystackRef   String?       @unique
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  coupon        Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  @@map("payments")
+}
+
+model CommunityPost {
+  id          String   @id @default(uuid())
+  userId      String
+  category    PostCategory
+  title       String
+  body        String   @db.Text
+  imageUrl    String?  // 👈 ADDED: Supports image uploads in chat
+  isPinned    Boolean  @default(false)
+  isResolved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies     CommunityReply[]
+
+  @@map("community_posts")
+}
+
+model CommunityReply {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  body      String   @db.Text
+  imageUrl  String?  // 👈 ADDED: Supports image uploads in replies
+  createdAt DateTime @default(now())
+
+  // Relations
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("community_replies")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Enums
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_REVISION
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PostCategory {
+  GENERAL
+  NICHE_RESEARCH
+  EDITING
+  YOUTUBE
+  MONETIZATION
+  TECHNICAL_ISSUES
+  ASSIGNMENTS
+}
+
+enum NotificationType {
+  NEW_LESSON
+  ASSIGNMENT_DUE
+  ASSIGNMENT_GRADED
+  QUESTION_ANSWERED
+  COMMUNITY_MENTION
+  INACTIVITY_WARNING
+  FINAL_WARNING
+  ACCESS_PAUSED
+  COURSE_COMPLETE
+  PAYMENT_SUCCESS
+  REFUND_PROCESSED
+}
